@@ -567,6 +567,7 @@ DataType BitcodeReader::toDataType(Module& module, const llvm::Type* type, Optio
                             << type->getIntegerBitWidth() << logging::endl;
         return TYPE_INT64;
     }
+#if LLVM_LIBRARY_VERSION < 150
     if(type->isPointerTy() && type->getPointerElementType()->isStructTy())
     {
         // recognize image types - taken from
@@ -586,6 +587,7 @@ DataType BitcodeReader::toDataType(Module& module, const llvm::Type* type, Optio
                 type, typesMap);
         }
     }
+#endif
     if(type->isStructTy())
     {
         // detect special OpenCL types
@@ -617,7 +619,11 @@ DataType BitcodeReader::toDataType(Module& module, const llvm::Type* type, Optio
     }
     if(type->isPointerTy())
     {
+#if LLVM_LIBRARY_VERSION >= 150
+        DataType elementType = TYPE_UNKNOWN;
+#else
         DataType elementType = toDataType(module, type->getPointerElementType());
+#endif
         return DataType(module.createPointerType(elementType,
             overrideAddressSpace.value_or(toAddressSpace(static_cast<int32_t>(type->getPointerAddressSpace())))));
     }
@@ -638,6 +644,7 @@ static ParameterDecorations toParameterDecorations(const llvm::Argument& arg, Da
         // XXX this sets the CL_KERNEL_ARG_TYPE_QUALIFIER for the parameter to CL_KERNEL_ARG_TYPE_CONST, which it
         // should not. Somehow this seems to be no problem anymore for LLVM 6.0 and up?!
         deco = add_flag(deco, ParameterDecorations::READ_ONLY);
+#if LLVM_LIBRARY_VERSION < 150
     if(type.getImageType())
     {
         const llvm::StructType* str = llvm::cast<const llvm::StructType>(arg.getType()->getPointerElementType());
@@ -646,6 +653,7 @@ static ParameterDecorations toParameterDecorations(const llvm::Argument& arg, Da
         else if(str->getName().find("wo_t") != std::string::npos)
             deco = add_flag(deco, ParameterDecorations::OUTPUT);
     }
+#endif
     if(arg.hasInAllocaAttr() && isKernel)
     {
         dumpLLVM(&arg);
@@ -877,7 +885,11 @@ void BitcodeReader::parseInstruction(
         for(auto& casePair : switchIns->cases())
         {
             auto caseValue = casePair.getCaseValue()->getZExtValue();
+#if LLVM_LIBRARY_VERSION >= 150
+            caseValue = caseValue & llvm::cast<llvm::IntegerType>(casePair.getCaseValue()->getType())->getBitMask();
+#else
             caseValue = caseValue & casePair.getCaseValue()->getType()->getBitMask();
+#endif
             caseLabels.emplace(caseValue, toValue(method, casePair.getCaseSuccessor(), &instructions));
         }
         instructions.emplace_back(
@@ -934,7 +946,11 @@ void BitcodeReader::parseInstruction(
         // for arrays, the allocated type is the array type, so we don't need to handle them special here
         const DataType contentType = toDataType(module, alloca->getAllocatedType());
         const DataType pointerType = toDataType(module, alloca->getType());
+#if LLVM_LIBRARY_VERSION >= 110
+        unsigned alignment = alloca->getAlign().value();
+#else
         unsigned alignment = alloca->getAlignment();
+#endif
         auto it = method.stackAllocations.emplace(
             StackAllocation(("%" + alloca->getName()).str(), pointerType, contentType.getInMemoryWidth(), alignment));
         localMap[alloca] = &(*it.first);
@@ -1584,6 +1600,7 @@ Value BitcodeReader::precalculateConstantExpression(
         dumpLLVM(expr);
         throw CompilationError(CompilationStep::PARSER, "Unhandled bit-width of type", src.to_string());
     }
+#if LLVM_LIBRARY_VERSION < 150
     if(expr->getOpcode() == llvm::Instruction::OtherOps::ICmp || expr->getOpcode() == llvm::Instruction::OtherOps::FCmp)
     {
         const DataType destType = toDataType(module, expr->getType());
@@ -1651,6 +1668,7 @@ Value BitcodeReader::precalculateConstantExpression(
             break;
         }
     }
+#endif
 
     OpCode opCode = OpCode::findOpCode(expr->getOpcodeName());
 

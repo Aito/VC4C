@@ -1484,7 +1484,7 @@ static Optional<AccumulationInfo> determineAccumulation(const Local* loc, const 
     }
 
     auto initialValue = initialWrite->precalculate().first;
-    if(initialValue == op->op.getLeftIdentity())
+    if(initialValue && op->op.getLeftIdentity() && initialValue.value() == op->op.getLeftIdentity().value())
         // no initial value to add
         initialValue = NO_VALUE;
     else if(!initialValue || !initialValue->type.isScalarType() || !op->op.isAssociative() || !op->op.isCommutative() ||
@@ -1538,8 +1538,14 @@ static Optional<AccumulationInfo> determineAccumulation(const Local* loc, const 
                     continue;
                 auto firstWriter = *writers.begin();
                 auto secondWriter = *(++writers.begin());
-                if((firstWriter == reader && secondWriter->getMoveSource() != initialWrite->getMoveSource()) ||
-                    (secondWriter == reader && firstWriter->getMoveSource() != initialWrite->getMoveSource()))
+                auto s_src = secondWriter->getMoveSource();
+                auto f_src = firstWriter->getMoveSource();
+                auto i_src = initialWrite->getMoveSource();
+                auto neq = [](const vc4c::Optional<vc4c::Value>& a, const vc4c::Optional<vc4c::Value>& b) {
+                    return (bool)a != (bool)b || (a && a.value() != b.value());
+                };
+                if((firstWriter == reader && neq(s_src, i_src)) ||
+                    (secondWriter == reader && neq(f_src, i_src)))
                     // check same initial value set
                     continue;
                 if(std::any_of(readers.begin(), readers.end(),

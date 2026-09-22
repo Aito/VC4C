@@ -51,7 +51,14 @@ LCOV_EXCL_STOP
 std::shared_ptr<llvm::LLVMContext> precompilation::initializeLLVMContext()
 {
     auto context = std::make_shared<llvm::LLVMContext>();
-    context->setDiagnosticHandlerCallBack([](const llvm::DiagnosticInfo& info, void* /* dummy */) {
+    context->setDiagnosticHandlerCallBack([](auto info_arg, void* /* dummy */) {
+        const llvm::DiagnosticInfo* info_ptr = nullptr;
+        if constexpr (std::is_pointer_v<decltype(info_arg)>) {
+            info_ptr = info_arg;
+        } else {
+            info_ptr = &info_arg;
+        }
+        const auto& info = *info_ptr;
         LCOV_EXCL_START
         std::stringstream ss;
         llvm::raw_os_ostream os(ss);

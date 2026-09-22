@@ -19,7 +19,7 @@
 #include "Optional.h"
 
 #if __cplusplus > 201402L
-#define NODISCARD [[nodiscard]]
+#define NODISCARD __attribute__((warn_unused_result))
 #else
 #define NODISCARD __attribute__((warn_unused_result))
 #endif

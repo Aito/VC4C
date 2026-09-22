@@ -210,7 +210,7 @@ static void compileOpenCLToLLVMIR0(const OpenCLSource& input, PrecompilationResu
     // only run preprocessor and compilation, no linking and code-generation
     // emit LLVM IR
     auto command =
-        buildClangCommand(clangPath, defaultOptions, options, std::string("-S ").append(EmitterTag::argument),
+        buildClangCommand(clangPath, defaultOptions, options, std::string(EmitterTag::TYPE == SourceType::LLVM_IR_TEXT ? "-S " : "").append(EmitterTag::argument),
             output.getOutputPath("/dev/stdout"), input.getInputPath("-"), config);
 
     auto commandString = to_string<std::string>(command, std::string{" "});
