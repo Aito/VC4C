@@ -29,22 +29,23 @@ sudo apt install cmake gcc g++ clang llvm-dev libclang-dev spirv-tools
 
 ### Build Instructions
 ```bash
-git clone <your_repository_url>/VC4C.git
+git clone https://github.com/Aito/VC4C.git
 cd VC4C
 
 # Create build directory and configure with CMake
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 
 # Build using multiple cores
-make -C build -j4
+make -C build -j2
 
 # Install to the system (/usr/local/bin, /usr/local/lib, /usr/local/include)
 sudo cmake --install build
+sudo ldconfig
 ```
 Once installed, the compiler (`vc4c`) will be available globally, and its shared library (`libVC4CC.so`) will be ready to be linked by the **VC4CL** runtime for JIT compilation.
 
 ## 🔗 Related Project
-To actually execute the compiled OpenCL kernels on your Raspberry Pi, you must also install the modernized OpenCL runtime: **[VC4CL](<your_vc4cl_repository_url>)**.
+To actually execute the compiled OpenCL kernels on your Raspberry Pi, you must also install the modernized OpenCL runtime: **[VC4CL](https://github.com/Aito/VC4CL)**.
 
 ## 🛠️ Development & Modernization Environment
 This modernization project was successfully completed with the assistance of **Antigravity 2.0 (Powered by Gemini 3.1 Pro)**.
